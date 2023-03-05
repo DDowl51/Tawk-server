@@ -32,6 +32,7 @@ const userSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
+// Hash password after save
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     return next();
@@ -43,10 +44,40 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
+// Hash otp after save
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('otp')) {
+    return next();
+  }
+
+  const salt = await bcrypt.genSalt(12);
+  if (this.otp) {
+    this.otp = await bcrypt.hash(this.otp, salt);
+  }
+
+  next();
+});
+
 userSchema.methods.correctPassword = function (password: string) {
   return bcrypt.compare(password, this.password);
 };
+userSchema.methods.correctOtp = function (otp: string) {
+  return bcrypt.compare(otp, this.otp);
+};
 
-const User = model('User', userSchema);
+userSchema.methods.changedPasswordAfter = function (timestamp: number) {
+  if (this.passwordChangedAt) {
+    const changedTimestamp = Math.floor(
+      this.passwordChangedAt.getTime() / 1000
+    );
+
+    return timestamp < changedTimestamp;
+  }
+
+  // False means NOT changed
+  return false;
+};
+
+const User = model<IUser>('User', userSchema);
 
 export default User;

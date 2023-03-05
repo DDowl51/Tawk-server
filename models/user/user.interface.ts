@@ -13,11 +13,13 @@ export interface IUser {
   passwordResetTokenExpires?: Date;
 
   verified: boolean;
-  otp: string;
-  otpExpireTime: Date;
+  otp?: string;
+  otpExpireTime?: Date;
 
   friends: Types.ObjectId[];
   online: boolean;
 
   correctPassword: (password: string) => Promise<boolean>;
+  correctOtp: (otp: string) => Promise<boolean>;
+  changedPasswordAfter: (timestamp: number) => boolean;
 }

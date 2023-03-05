@@ -2,7 +2,7 @@ import { ErrorRequestHandler } from 'express';
 
 export class AppError extends Error {
   public status: string;
-  constructor(public message: string, public statusCode: number) {
+  constructor(public message: string, public statusCode: number = 400) {
     super(message);
     if (statusCode.toString().startsWith('4')) {
       this.status = 'Fail';
