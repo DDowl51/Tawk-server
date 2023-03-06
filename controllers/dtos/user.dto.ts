@@ -4,3 +4,7 @@ export interface CreateUserDto {
   avatar?: string;
   password: string;
 }
+
+export interface SearchUserDto {
+  pattern: string;
+}

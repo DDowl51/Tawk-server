@@ -18,6 +18,7 @@ export interface IUser {
 
   friends: Types.ObjectId[];
   online: boolean;
+  socketId?: string;
 
   correctPassword: (password: string) => Promise<boolean>;
   correctOtp: (otp: string) => Promise<boolean>;

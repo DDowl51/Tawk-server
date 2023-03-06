@@ -28,6 +28,7 @@ const userSchema = new Schema<IUser>(
 
     friends: { type: [Schema.Types.ObjectId], ref: 'User' },
     online: { type: Boolean, default: false },
+    socketId: { type: String },
   },
   { timestamps: true }
 );
