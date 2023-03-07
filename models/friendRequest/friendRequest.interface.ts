@@ -1,7 +1,9 @@
-import { Types } from 'mongoose';
+import { User } from '../../utils/types';
 
 export interface IFriendRequest {
-  sender: Types.ObjectId;
-  recipient: Types.ObjectId;
+  sender: User;
+  recipient: User;
   accepted: boolean;
+  handled: boolean;
+  requestTimes: number;
 }

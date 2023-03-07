@@ -15,7 +15,7 @@ const socketHandler = async (socket: Socket) => {
   // Create a UserSocket instance
   const userSocket = new UserSocket(socket, user._id.toString());
 
-  console.log(`${user.name} connected`);
+  console.log(`${user.email} connected`);
 
   socket.on(ServerEvents.Disconnect, () => {
     console.log(`${user.name} disconnected`);
@@ -24,6 +24,15 @@ const socketHandler = async (socket: Socket) => {
   socket.on(
     ServerEvents.CreateFriendRequest,
     userSocket.createFriendRequest.bind(userSocket)
+  );
+  socket.on(
+    ServerEvents.HandleFriendRequest,
+    userSocket.handleFriendRequest.bind(userSocket)
+  );
+
+  socket.on(
+    ServerEvents.SendMessage,
+    userSocket.handleMessage.bind(userSocket)
   );
 };
 

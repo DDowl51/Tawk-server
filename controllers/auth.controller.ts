@@ -4,7 +4,7 @@ import otpGenerator from 'otp-generator';
 import catchAsync from '../utils/catchAsync';
 import { AppError } from '../utils/error';
 import User from '../models/user/user';
-import { Request, WithUser } from '../utils/RequestType';
+import { Request, WithUser } from '../utils/types';
 import { LoginDto, RegisterDto, VerifyOTPDto } from './dtos/auth.dto';
 import filter from '../utils/filterObj';
 
@@ -23,7 +23,7 @@ export const protect = catchAsync(
       req.headers.authorization.startsWith('Bearer')
     ) {
       token = req.headers.authorization.split(' ')[1];
-    } else if (req.cookies.jwt) {
+    } else if (req.cookies?.jwt) {
       token = req.cookies.jwt;
     } else {
       return next(
@@ -116,7 +116,7 @@ export const verifyOTP = catchAsync(
     const user = await User.findOne({
       email,
       otpExpireTime: { $gt: Date.now() }, // not expire yet
-    });
+    }).populate('friends', 'name email avatar about');
     if (!user) return next(new AppError('Invalid Email or OTP expired'));
 
     if (!(await user.correctOtp(otp))) {
@@ -131,12 +131,12 @@ export const verifyOTP = catchAsync(
     await user.save();
 
     const token = signToken(user._id.toString());
-
+    user.password = '';
     res.status(200).json({
       status: 'success',
       message: 'OTP verified successfully',
       token,
-      userId: user._id,
+      user,
     });
   }
 );
@@ -144,7 +144,10 @@ export const verifyOTP = catchAsync(
 export const login = catchAsync(async (req: Request<LoginDto>, res, next) => {
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email }).populate(
+    'friends',
+    'name email avatar about'
+  );
 
   if (!user || !(await user.correctPassword(password))) {
     return next(new AppError('Incorrect email or password, please try again.'));
@@ -152,10 +155,11 @@ export const login = catchAsync(async (req: Request<LoginDto>, res, next) => {
 
   const token = signToken(user._id.toString());
 
+  user.password = '';
   res.status(200).json({
     status: 'success',
     message: 'Login successfully',
     token,
-    userId: user._id,
+    user,
   });
 });

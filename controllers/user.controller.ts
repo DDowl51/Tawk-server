@@ -1,6 +1,6 @@
 import User from '../models/user/user';
 import catchAsync from '../utils/catchAsync';
-import { Request } from '../utils/RequestType';
+import { Request } from '../utils/types';
 import { CreateUserDto, SearchUserDto } from './dtos/user.dto';
 
 export const createUser = catchAsync(
@@ -36,5 +36,16 @@ export const searchUser = catchAsync(async (req, res, next) => {
     status: 'success',
     message: 'search success',
     users,
+  });
+});
+
+// Protected
+export const getFriends = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user._id);
+
+  res.status(200).json({
+    status: 'success',
+    message: 'get friends success',
+    friends: user?.friends,
   });
 });
