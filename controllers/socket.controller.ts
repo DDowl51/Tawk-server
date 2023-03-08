@@ -7,12 +7,17 @@ import {
   HandleFriendRequestDto,
   CreateFriendRequestDto,
   HandleMessageDto,
+  HandleCreateGroupDto,
 } from './dtos/socket.dto';
 import { ClientEvents } from '../models/socket.event';
 import FriendRequest from '../models/friendRequest/friendRequest';
-import { Message as MessageType } from '../utils/types';
-import Chatroom from '../models/chatroom/chatroom';
-import Message from '../models/message/message';
+import {
+  Message,
+  Message as MessageType,
+  User as UserType,
+} from '../utils/types';
+import { Chatroom, GroupChatroom } from '../models/chatroom/chatroom';
+import { LinkMessage, TextMessage } from '../models/message/message';
 
 type SocketHander = (
   socket: Socket,
@@ -60,8 +65,10 @@ export class UserSocket {
     }
 
     // 2) check if both sender and recipient exists
-    const sender = await User.findById(senderId);
-    const recipient = await User.findById(recipientId);
+    const [sender, recipient] = await Promise.all([
+      User.findById(senderId),
+      User.findById(recipientId),
+    ]);
     if (!sender || !recipient) {
       return this.emitError('User not found');
     }
@@ -115,8 +122,11 @@ export class UserSocket {
     }
 
     //- 3) Check if the sender still exists
-    const sender = await User.findById(request.sender._id);
-    const recipient = await User.findById(request.recipient._id);
+    const [sender, recipient] = await Promise.all([
+      User.findById(request.sender._id),
+      User.findById(request.recipient._id),
+    ]);
+
     if (!sender || !recipient) {
       return this.emitError('Invalid request');
     }
@@ -132,8 +142,7 @@ export class UserSocket {
     if (accepted) {
       recipient.friends.push(sender._id);
       sender.friends.push(recipient._id);
-      await recipient.save();
-      await sender.save();
+      await Promise.all([recipient.save(), sender.save()]);
     }
     await request.save();
 
@@ -146,24 +155,37 @@ export class UserSocket {
     data: HandleMessageDto,
     callback: (message: MessageType) => void
   ) {
-    const { from, text, chatroomId } = data;
+    const { from, text, chatroomId, type } = data;
     //- 0) Create message
-    console.log(data);
     const sender = await User.findById(from);
-    const message = await Message.create({
-      sender,
-      text,
-      chatroomId,
-      type: 'text',
-    });
+    let message: MessageType;
+    switch (type) {
+      default:
+      case 'text': {
+        message = await TextMessage.create({
+          sender,
+          text,
+          chatroomId,
+        });
+        break;
+      }
+      case 'link': {
+        message = await LinkMessage.create({
+          link: text,
+          sender,
+          text,
+          chatroomId,
+        });
+        break;
+      }
+    }
+
     //- 1) get all users in the chatroom of the message
-    const chatroom = await Chatroom.findById(chatroomId).populate(
-      'users',
-      'socketId'
-    );
+    const chatroom = await Chatroom.findById(chatroomId);
     if (!chatroom) {
       return this.emitError('Invalid chatroomId');
     }
+    await chatroom.populate('users', 'socketId');
     chatroom.lastMessage = message;
     chatroom.messages.push(message);
     await chatroom.save();
@@ -178,6 +200,59 @@ export class UserSocket {
     callback(message);
   }
 
+  async friendOnline() {
+    const user = await User.findById(this.userId).populate(
+      'friends',
+      'socketId'
+    )!;
+    if (!user) {
+      return this.emitError('Invalid user');
+    }
+    const fSids = (user.friends as unknown as UserType[]).map(u => u.socketId);
+    this.emitTo(fSids, ClientEvents.FriendOnline, user._id);
+  }
+  async friendOffline() {
+    const user = await User.findById(this.userId).populate(
+      'friends',
+      'socketId'
+    )!;
+    if (!user) {
+      return this.emitError('Invalid user');
+    }
+    const fSids = (user.friends as unknown as UserType[]).map(u => u.socketId);
+    this.emitTo(fSids, ClientEvents.FriendOffline, user._id);
+  }
+
+  async handleCreateGroup(
+    data: HandleCreateGroupDto,
+    callback: (chatroom: any) => void
+  ) {
+    const { members, name } = data;
+    // 1) Check if members are all valid
+    const users = await Promise.all(members.map(mId => User.findById(mId)));
+
+    const invalidMembers = users.filter(u => u === null);
+    if (invalidMembers.length !== 0) {
+      // Don't return
+      this.emitError('Some invalid users have been filtered out');
+    }
+
+    // 2) Create Group, I'm the owner!!
+    const groupChatroom = await GroupChatroom.create({
+      name,
+      users,
+      owner: this.userId,
+    });
+
+    // 3) Emit to all group members(using socket.emit) and myself(using callback)
+    this.emitTo(
+      users.map(u => u?.socketId),
+      ClientEvents.JoinGroup,
+      groupChatroom
+    );
+    callback(groupChatroom);
+  }
+
   private emitError(reason: string) {
     this.socket.emit(ClientEvents.Error, reason);
   }
@@ -188,8 +263,11 @@ export class UserSocket {
     data?: any
   ) {
     if (Array.isArray(socketId)) {
-      const ids = socketId.filter(id => !!id) as string[];
-      this.socket.to(ids).emit(evName, data);
+      socketId.forEach(sid => {
+        if (sid) {
+          this.socket.to(sid).emit(evName, data);
+        }
+      });
     } else if (socketId) {
       this.socket.to(socketId).emit(evName, data);
     }

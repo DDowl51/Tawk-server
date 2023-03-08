@@ -1,6 +1,11 @@
 import { model, Schema } from 'mongoose';
-import User from '../user/user';
-import { IMessage } from './message.interface';
+import {
+  IFileMessage,
+  IImgMessage,
+  ILinkMessage,
+  IMessage,
+  ITextMessage,
+} from './message.interface';
 
 const messageSchema = new Schema<IMessage>(
   {
@@ -13,8 +18,29 @@ const messageSchema = new Schema<IMessage>(
     chatroomId: { type: Schema.Types.ObjectId, ref: 'Chatroom' },
     sender: { type: Schema.Types.ObjectId, ref: 'User' },
   },
-  { timestamps: true }
+  { timestamps: true, discriminatorKey: 'type' }
 );
+
+const textMessageSchema = new Schema<ITextMessage>({});
+
+const imgMessageSchema = new Schema<IImgMessage>({
+  img: { type: String, required: true },
+});
+
+const fileMessageSchema = new Schema<IFileMessage>({
+  fileInfo: {
+    type: {
+      filename: { type: String, required: true },
+      filesize: { type: Number, required: true },
+    },
+  },
+  file: { type: String, required: true },
+});
+
+const linkMessageSchema = new Schema<ILinkMessage>({
+  link: { type: String, required: true },
+  preview: { type: String },
+});
 
 messageSchema.pre(/^find/, function (next) {
   this.populate('sender', 'name email avatar about');
@@ -23,4 +49,9 @@ messageSchema.pre(/^find/, function (next) {
 
 const Message = model<IMessage>('Message', messageSchema);
 
-export default Message;
+const TextMessage = Message.discriminator('text', textMessageSchema);
+const ImgMessage = Message.discriminator('img', imgMessageSchema);
+const FileMessage = Message.discriminator('file', fileMessageSchema);
+const LinkMessage = Message.discriminator('link', linkMessageSchema);
+
+export { Message, TextMessage, ImgMessage, FileMessage, LinkMessage };

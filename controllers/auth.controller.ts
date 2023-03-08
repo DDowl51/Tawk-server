@@ -116,7 +116,7 @@ export const verifyOTP = catchAsync(
     const user = await User.findOne({
       email,
       otpExpireTime: { $gt: Date.now() }, // not expire yet
-    }).populate('friends', 'name email avatar about');
+    }).populate('friends', 'name email avatar about online');
     if (!user) return next(new AppError('Invalid Email or OTP expired'));
 
     if (!(await user.correctOtp(otp))) {
@@ -146,7 +146,7 @@ export const login = catchAsync(async (req: Request<LoginDto>, res, next) => {
 
   const user = await User.findOne({ email }).populate(
     'friends',
-    'name email avatar about'
+    'name email avatar about online'
   );
 
   if (!user || !(await user.correctPassword(password))) {

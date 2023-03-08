@@ -1,10 +1,13 @@
 import { model, Schema } from 'mongoose';
-import Message from '../message/message';
-import { IChatroom } from './chatroom.interface';
+import { Message } from '../message/message';
+import {
+  IChatroom,
+  IGroupChatroom,
+  ISingleChatroom,
+} from './chatroom.interface';
 
 const chatroomSchema = new Schema<IChatroom>(
   {
-    name: { type: String, required: true },
     messages: {
       type: [Schema.Types.ObjectId],
       ref: Message,
@@ -20,8 +23,15 @@ const chatroomSchema = new Schema<IChatroom>(
       ref: Message,
     },
   },
-  { timestamps: true }
+  { timestamps: true, discriminatorKey: 'type' }
 );
+
+const singleChatroomSchema = new Schema<ISingleChatroom>({});
+const groupChatroomSchema = new Schema<IGroupChatroom>({
+  name: { type: String, required: true },
+  owner: { type: Schema.Types.ObjectId, ref: 'User' },
+  admins: { type: [Schema.Types.ObjectId], ref: 'User', default: [] },
+});
 
 chatroomSchema.pre(/^find/, function (next) {
   this.populate({
@@ -36,6 +46,12 @@ chatroomSchema.pre(/^find/, function (next) {
   next();
 });
 
-const Chatroom = model<IChatroom>('Chatroom', chatroomSchema);
-
-export default Chatroom;
+export const Chatroom = model<IChatroom>('Chatroom', chatroomSchema);
+export const SingleChatroom = Chatroom.discriminator(
+  'single',
+  singleChatroomSchema
+);
+export const GroupChatroom = Chatroom.discriminator(
+  'group',
+  groupChatroomSchema
+);

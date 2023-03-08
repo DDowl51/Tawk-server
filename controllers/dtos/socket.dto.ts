@@ -14,4 +14,10 @@ export interface HandleMessageDto {
   from: string;
   text: string;
   chatroomId: string;
+  type: 'text' | 'img' | 'file' | 'link';
+}
+
+export interface HandleCreateGroupDto {
+  members: string[];
+  name: string;
 }
