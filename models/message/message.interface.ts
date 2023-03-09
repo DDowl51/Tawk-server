@@ -27,5 +27,13 @@ export interface IFileMessage extends IMessage {
 export interface ILinkMessage extends IMessage {
   type: 'link';
   link: string;
-  preview: string;
+  preview?: {
+    description?: string;
+    favicon?: string;
+    image?: string;
+    site_name?: string;
+    title?: string;
+    type?: string;
+    url?: string;
+  };
 }

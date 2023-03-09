@@ -39,7 +39,16 @@ const fileMessageSchema = new Schema<IFileMessage>({
 
 const linkMessageSchema = new Schema<ILinkMessage>({
   link: { type: String, required: true },
-  preview: { type: String },
+  preview: {
+    type: {
+      description: String,
+      favicon: String,
+      image: String,
+      site_name: String,
+      title: String,
+      url: String,
+    },
+  },
 });
 
 messageSchema.pre(/^find/, function (next) {

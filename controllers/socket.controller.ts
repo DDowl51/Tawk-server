@@ -18,6 +18,7 @@ import {
 } from '../utils/types';
 import { Chatroom, GroupChatroom } from '../models/chatroom/chatroom';
 import { LinkMessage, TextMessage } from '../models/message/message';
+import axios from 'axios';
 
 type SocketHander = (
   socket: Socket,
@@ -170,11 +171,25 @@ export class UserSocket {
         break;
       }
       case 'link': {
+        // Get preview of the website
+        let data;
+        try {
+          data = (
+            await axios.get(
+              `https://opengraph.io/api/1.1/site/${encodeURIComponent(
+                text
+              )}?app_id=${process.env.OPENGRAPH_APPID}`,
+              { timeout: 5000 }
+            )
+          ).data;
+        } catch (error) {}
+        console.log(data?.hybridGraph);
         message = await LinkMessage.create({
           link: text,
           sender,
           text,
           chatroomId,
+          preview: data?.hybridGraph,
         });
         break;
       }
@@ -185,17 +200,16 @@ export class UserSocket {
     if (!chatroom) {
       return this.emitError('Invalid chatroomId');
     }
-    await chatroom.populate('users', 'socketId');
+    await chatroom.populate('users', 'socketId email');
     chatroom.lastMessage = message;
     chatroom.messages.push(message);
     await chatroom.save();
-
     //- 2) get the socketIds of the users
     const socketIds = chatroom.users.map(u => u.socketId);
 
     //- 3) forward the message to the users except the sender
     this.emitTo(socketIds, ClientEvents.NewMessage, message);
-
+    console.log(chatroom.users);
     //- 4) callback(message)
     callback(message);
   }
@@ -228,6 +242,8 @@ export class UserSocket {
     callback: (chatroom: any) => void
   ) {
     const { members, name } = data;
+    // DON'T FORGET TO ADD YOURSELF
+    members.push(this.userId);
     // 1) Check if members are all valid
     const users = await Promise.all(members.map(mId => User.findById(mId)));
 
