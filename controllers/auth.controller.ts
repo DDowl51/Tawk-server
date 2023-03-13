@@ -143,7 +143,7 @@ export const verifyOTP = catchAsync(
 
 export const login = catchAsync(async (req: Request<LoginDto>, res, next) => {
   const { email, password } = req.body;
-
+  console.log(`${email} tried to login`);
   const user = await User.findOne({ email }).populate(
     'friends',
     'name email avatar about online'

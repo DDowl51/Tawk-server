@@ -23,7 +23,7 @@ app.use('/api', limiter);
 app.use(helmet());
 app.use(
   cors({
-    origin: '*',
+    origin: 'https://192.168.0.102:3000',
     methods: ['GET', 'PATCH', 'POST', 'DELETE', 'PUT'],
     credentials: true,
   })

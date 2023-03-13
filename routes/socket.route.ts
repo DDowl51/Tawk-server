@@ -1,6 +1,10 @@
 import { Server, Socket } from 'socket.io';
 import { UserSocket } from '../controllers/socket.controller';
-import { ClientEvents, ServerEvents } from '../models/socket.event';
+import {
+  ClientEvents,
+  ServerEvents,
+  WebRTCEvents,
+} from '../models/socket.event';
 import User from '../models/user/user';
 import { User as UserType } from '../utils/types';
 
@@ -49,6 +53,14 @@ const socketHandler = async (socket: Socket) => {
     ServerEvents.CreateGroup,
     userSocket.handleCreateGroup.bind(userSocket)
   );
+
+  socket.on(WebRTCEvents.Offer, userSocket.handleOffer.bind(userSocket));
+  socket.on(WebRTCEvents.Answer, userSocket.handleAnswer.bind(userSocket));
+  socket.on(
+    WebRTCEvents.Candidate,
+    userSocket.handleCandidate.bind(userSocket)
+  );
+  socket.on(WebRTCEvents.Reject, userSocket.handleReject.bind(userSocket));
 };
 
 export default socketHandler;

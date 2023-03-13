@@ -8,8 +8,14 @@ import {
   CreateFriendRequestDto,
   HandleMessageDto,
   HandleCreateGroupDto,
+  HandleStartVideoDto,
+  HandleAnswerCallDto,
+  HandleOfferDto,
+  HandleAnswerDto,
+  HandleCandidateDto,
+  HandleRejectDto,
 } from './dtos/socket.dto';
-import { ClientEvents } from '../models/socket.event';
+import { ClientEvents, WebRTCEvents } from '../models/socket.event';
 import FriendRequest from '../models/friendRequest/friendRequest';
 import {
   Message,
@@ -225,6 +231,7 @@ export class UserSocket {
     const fSids = (user.friends as unknown as UserType[]).map(u => u.socketId);
     this.emitTo(fSids, ClientEvents.FriendOnline, user._id);
   }
+
   async friendOffline() {
     const user = await User.findById(this.userId).populate(
       'friends',
@@ -267,6 +274,62 @@ export class UserSocket {
       groupChatroom
     );
     callback(groupChatroom);
+  }
+
+  async handleOffer(data: HandleOfferDto) {
+    const { sdp, to } = data;
+    console.log(`handle offer from user ${this.userId} to ${to}`);
+    const toUser = await User.findById(to);
+    const meUser = await User.findById(this.userId);
+    if (!toUser || !toUser.socketId) {
+      return this.socket.emit(WebRTCEvents.Error, 'User not online');
+    }
+
+    this.emitTo(toUser.socketId, WebRTCEvents.Offer, {
+      remoteSDP: sdp,
+      from: meUser,
+    });
+  }
+
+  async handleAnswer(data: HandleAnswerDto, callback: () => void) {
+    const { sdp, to } = data;
+    console.log(`handle answer from user ${this.userId} to ${to}`);
+    const toUser = await User.findById(to);
+    if (!toUser || !toUser.socketId) {
+      return this.socket.emit(WebRTCEvents.Error, 'User not online');
+    }
+
+    this.emitTo(toUser.socketId, WebRTCEvents.Answer, sdp);
+    callback();
+  }
+
+  async handleCandidate(data: HandleCandidateDto, callback?: () => void) {
+    const { candidate, to } = data;
+    console.log(`handle candidate from user ${this.userId} to ${to}`);
+    const toUser = await User.findById(to);
+    if (!toUser || !toUser.socketId) {
+      return this.socket.emit(WebRTCEvents.Error, 'User not online');
+    }
+
+    this.emitTo(toUser.socketId, WebRTCEvents.Candidate, candidate);
+    if (callback) {
+      callback();
+    }
+  }
+
+  async handleReject(data: HandleRejectDto, callback?: () => void) {
+    const { reason, to } = data;
+
+    console.log(`${this.userId} ended the call to ${to}`);
+    const toUser = await User.findById(to);
+    if (!toUser || !toUser.socketId) {
+      return this.socket.emit(WebRTCEvents.Error, 'User not online');
+    }
+    this.emitTo(toUser.socketId, WebRTCEvents.Reject, reason);
+
+    if (callback) {
+      callback();
+    }
   }
 
   private emitError(reason: string) {
