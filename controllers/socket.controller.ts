@@ -14,6 +14,8 @@ import {
   HandleAnswerDto,
   HandleCandidateDto,
   HandleRejectDto,
+  HandleMicrophoneDto,
+  HandleSpeakerDto,
 } from './dtos/socket.dto';
 import { ClientEvents, WebRTCEvents } from '../models/socket.event';
 import FriendRequest from '../models/friendRequest/friendRequest';
@@ -164,7 +166,9 @@ export class UserSocket {
   ) {
     const { from, text, chatroomId, type } = data;
     //- 0) Create message
-    const sender = await User.findById(from);
+    const sender = await User.findById(from).select(
+      'name email avatar about socketId'
+    );
     let message: MessageType;
     switch (type) {
       default:
@@ -215,9 +219,9 @@ export class UserSocket {
 
     //- 3) forward the message to the users except the sender
     this.emitTo(socketIds, ClientEvents.NewMessage, message);
-    console.log(chatroom.users);
     //- 4) callback(message)
     callback(message);
+    console.log(message.text);
   }
 
   async friendOnline() {
@@ -252,7 +256,11 @@ export class UserSocket {
     // DON'T FORGET TO ADD YOURSELF
     members.push(this.userId);
     // 1) Check if members are all valid
-    const users = await Promise.all(members.map(mId => User.findById(mId)));
+    const users = await Promise.all(
+      members.map(mId =>
+        User.findById(mId).select('name email avatar about socketId')
+      )
+    );
 
     const invalidMembers = users.filter(u => u === null);
     if (invalidMembers.length !== 0) {
@@ -277,56 +285,103 @@ export class UserSocket {
   }
 
   async handleOffer(data: HandleOfferDto) {
-    const { sdp, to } = data;
+    const { sdp, to, type } = data;
     console.log(`handle offer from user ${this.userId} to ${to}`);
-    const toUser = await User.findById(to);
-    const meUser = await User.findById(this.userId);
+    const toUser = await User.findById(to).select('name email socketId');
+    const meUser = await User.findById(this.userId).select('name email');
     if (!toUser || !toUser.socketId) {
-      return this.socket.emit(WebRTCEvents.Error, 'User not online');
+      return this.socket.emit(WebRTCEvents.Error, {
+        reason: 'User not online',
+        type,
+      });
     }
 
     this.emitTo(toUser.socketId, WebRTCEvents.Offer, {
       remoteSDP: sdp,
       from: meUser,
+      type,
     });
   }
 
   async handleAnswer(data: HandleAnswerDto, callback: () => void) {
-    const { sdp, to } = data;
+    const { sdp, to, type } = data;
     console.log(`handle answer from user ${this.userId} to ${to}`);
-    const toUser = await User.findById(to);
+    const toUser = await User.findById(to).select('name email socketId');
     if (!toUser || !toUser.socketId) {
-      return this.socket.emit(WebRTCEvents.Error, 'User not online');
+      return this.socket.emit(WebRTCEvents.Error, {
+        reason: 'User not online',
+        type,
+      });
     }
 
-    this.emitTo(toUser.socketId, WebRTCEvents.Answer, sdp);
+    this.emitTo(toUser.socketId, WebRTCEvents.Answer, { remoteSDP: sdp, type });
     callback();
   }
 
   async handleCandidate(data: HandleCandidateDto, callback?: () => void) {
-    const { candidate, to } = data;
+    const { candidate, to, type } = data;
     console.log(`handle candidate from user ${this.userId} to ${to}`);
-    const toUser = await User.findById(to);
+    const toUser = await User.findById(to).select('name email socketId');
     if (!toUser || !toUser.socketId) {
-      return this.socket.emit(WebRTCEvents.Error, 'User not online');
+      // Candidate 会一次发送很多，并且会在创建offer的时候一起发送，因此
+      // 在这里也向客户端返回错误的话有可能在pc close之前返回错误，
+      // 由于如果在candidate传送期间用户不在线，那么用户很可能在发送offer的时候就已经不在线了,
+      // 这种情况下， handleOffer会正确的返回用户不在线的错误，handleCandidate中不用再返回一次
+      return;
     }
 
-    this.emitTo(toUser.socketId, WebRTCEvents.Candidate, candidate);
+    this.emitTo(toUser.socketId, WebRTCEvents.Candidate, { candidate, type });
     if (callback) {
       callback();
     }
   }
 
   async handleReject(data: HandleRejectDto, callback?: () => void) {
-    const { reason, to } = data;
-
+    const { reason, to, type } = data;
+    console.log(reason);
     console.log(`${this.userId} ended the call to ${to}`);
-    const toUser = await User.findById(to);
+    const toUser = await User.findById(to).select('name email socketId');
     if (!toUser || !toUser.socketId) {
-      return this.socket.emit(WebRTCEvents.Error, 'User not online');
+      return this.socket.emit(WebRTCEvents.Error, {
+        reason: 'User not online',
+        type,
+      });
     }
-    this.emitTo(toUser.socketId, WebRTCEvents.Reject, reason);
+    this.emitTo(toUser.socketId, WebRTCEvents.Reject, { reason, type });
 
+    if (callback) {
+      callback();
+    }
+  }
+
+  async handleMicrophone(data: HandleMicrophoneDto, callback?: () => void) {
+    const { to, enabled, type } = data;
+    const toUser = await User.findById(to).select('socketId');
+    if (!toUser || !toUser.socketId) {
+      return this.socket.emit(WebRTCEvents.Error, {
+        reason: 'User not online',
+        type,
+      });
+    }
+    this.emitTo(toUser.socketId, WebRTCEvents.Microphone, { enabled, type });
+    console.log(data);
+    if (callback) {
+      callback();
+    }
+  }
+
+  async handleSpeaker(data: HandleSpeakerDto, callback?: () => void) {
+    const { to, enabled, type } = data;
+    const toUser = await User.findById(to).select('socketId');
+
+    if (!toUser || !toUser.socketId) {
+      return this.socket.emit(WebRTCEvents.Error, {
+        reason: 'User not online',
+        type,
+      });
+    }
+    this.emitTo(toUser.socketId, WebRTCEvents.Speaker, { enabled, type });
+    console.log(data);
     if (callback) {
       callback();
     }

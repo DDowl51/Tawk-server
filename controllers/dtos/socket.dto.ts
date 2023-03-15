@@ -34,21 +34,37 @@ export interface HandleAnswerCallDto {
 }
 
 export interface HandleOfferDto {
+  type: 'audio' | 'video';
   sdp: RTCSessionDescriptionInit;
   to: string;
 }
 
 export interface HandleAnswerDto {
+  type: 'audio' | 'video';
   sdp: RTCSessionDescriptionInit;
   to: string;
 }
 
 export interface HandleCandidateDto {
+  type: 'audio' | 'video';
   candidate: RTCIceCandidate;
   to: string;
 }
 
 export interface HandleRejectDto {
+  type: 'audio' | 'video';
   to: string;
   reason: string;
+}
+
+export interface HandleMicrophoneDto {
+  type: 'audio' | 'video';
+  to: string;
+  enabled: boolean;
+}
+
+export interface HandleSpeakerDto {
+  type: 'audio' | 'video';
+  to: string;
+  enabled: boolean;
 }

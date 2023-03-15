@@ -33,4 +33,6 @@ export const WebRTCEvents = {
   Candidate: 'webrtc:candidate',
   Reject: 'webrtc:reject',
   Error: 'webrtc:error',
+  Microphone: 'webrtc:microphone',
+  Speaker: 'webrtc:speaker',
 } as const;
