@@ -290,10 +290,7 @@ export class UserSocket {
     const toUser = await User.findById(to).select('name email socketId');
     const meUser = await User.findById(this.userId).select('name email');
     if (!toUser || !toUser.socketId) {
-      return this.socket.emit(WebRTCEvents.Error, {
-        reason: 'User not online',
-        type,
-      });
+      return this.socket.emit(WebRTCEvents.Error, 'User not online');
     }
 
     this.emitTo(toUser.socketId, WebRTCEvents.Offer, {
@@ -308,10 +305,7 @@ export class UserSocket {
     console.log(`handle answer from user ${this.userId} to ${to}`);
     const toUser = await User.findById(to).select('name email socketId');
     if (!toUser || !toUser.socketId) {
-      return this.socket.emit(WebRTCEvents.Error, {
-        reason: 'User not online',
-        type,
-      });
+      return this.socket.emit(WebRTCEvents.Error, 'User not online');
     }
 
     this.emitTo(toUser.socketId, WebRTCEvents.Answer, { remoteSDP: sdp, type });
@@ -330,7 +324,7 @@ export class UserSocket {
       return;
     }
 
-    this.emitTo(toUser.socketId, WebRTCEvents.Candidate, { candidate, type });
+    this.emitTo(toUser.socketId, WebRTCEvents.Candidate, candidate);
     if (callback) {
       callback();
     }
@@ -342,12 +336,9 @@ export class UserSocket {
     console.log(`${this.userId} ended the call to ${to}`);
     const toUser = await User.findById(to).select('name email socketId');
     if (!toUser || !toUser.socketId) {
-      return this.socket.emit(WebRTCEvents.Error, {
-        reason: 'User not online',
-        type,
-      });
+      return this.socket.emit(WebRTCEvents.Error, 'User not online');
     }
-    this.emitTo(toUser.socketId, WebRTCEvents.Reject, { reason, type });
+    this.emitTo(toUser.socketId, WebRTCEvents.EndCall, reason);
 
     if (callback) {
       callback();
@@ -355,15 +346,12 @@ export class UserSocket {
   }
 
   async handleMicrophone(data: HandleMicrophoneDto, callback?: () => void) {
-    const { to, enabled, type } = data;
+    const { to, muted } = data;
     const toUser = await User.findById(to).select('socketId');
     if (!toUser || !toUser.socketId) {
-      return this.socket.emit(WebRTCEvents.Error, {
-        reason: 'User not online',
-        type,
-      });
+      return this.socket.emit(WebRTCEvents.Error, 'User not online');
     }
-    this.emitTo(toUser.socketId, WebRTCEvents.Microphone, { enabled, type });
+    this.emitTo(toUser.socketId, WebRTCEvents.Microphone, muted);
     console.log(data);
     if (callback) {
       callback();
@@ -371,16 +359,13 @@ export class UserSocket {
   }
 
   async handleSpeaker(data: HandleSpeakerDto, callback?: () => void) {
-    const { to, enabled, type } = data;
+    const { to, muted } = data;
     const toUser = await User.findById(to).select('socketId');
 
     if (!toUser || !toUser.socketId) {
-      return this.socket.emit(WebRTCEvents.Error, {
-        reason: 'User not online',
-        type,
-      });
+      return this.socket.emit(WebRTCEvents.Error, 'User not online');
     }
-    this.emitTo(toUser.socketId, WebRTCEvents.Speaker, { enabled, type });
+    this.emitTo(toUser.socketId, WebRTCEvents.Speaker, muted);
     console.log(data);
     if (callback) {
       callback();

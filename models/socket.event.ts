@@ -31,7 +31,7 @@ export const WebRTCEvents = {
   Offer: 'webrtc:offer',
   Answer: 'webrtc:answer',
   Candidate: 'webrtc:candidate',
-  Reject: 'webrtc:reject',
+  EndCall: 'webrtc:endcall',
   Error: 'webrtc:error',
   Microphone: 'webrtc:microphone',
   Speaker: 'webrtc:speaker',

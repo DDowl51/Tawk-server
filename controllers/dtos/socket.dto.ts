@@ -58,13 +58,11 @@ export interface HandleRejectDto {
 }
 
 export interface HandleMicrophoneDto {
-  type: 'audio' | 'video';
   to: string;
-  enabled: boolean;
+  muted: boolean;
 }
 
 export interface HandleSpeakerDto {
-  type: 'audio' | 'video';
   to: string;
-  enabled: boolean;
+  muted: boolean;
 }

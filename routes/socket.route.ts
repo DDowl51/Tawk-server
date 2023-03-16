@@ -60,7 +60,7 @@ const socketHandler = async (socket: Socket) => {
     WebRTCEvents.Candidate,
     userSocket.handleCandidate.bind(userSocket)
   );
-  socket.on(WebRTCEvents.Reject, userSocket.handleReject.bind(userSocket));
+  socket.on(WebRTCEvents.EndCall, userSocket.handleReject.bind(userSocket));
   socket.on(
     WebRTCEvents.Microphone,
     userSocket.handleMicrophone.bind(userSocket)
