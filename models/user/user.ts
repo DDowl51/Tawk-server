@@ -26,6 +26,12 @@ const userSchema = new Schema<IUser>(
     otp: { type: String },
     otpExpireTime: { type: Date },
 
+    callLogs: {
+      type: [Schema.Types.ObjectId],
+      ref: 'CallLog',
+      default: [],
+    },
+
     friends: { type: [Schema.Types.ObjectId], ref: 'User' },
     online: { type: Boolean, default: false },
     socketId: { type: String },

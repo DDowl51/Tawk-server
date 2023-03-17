@@ -43,6 +43,7 @@ export interface HandleAnswerDto {
   type: 'audio' | 'video';
   sdp: RTCSessionDescriptionInit;
   to: string;
+  callLogId: string;
 }
 
 export interface HandleCandidateDto {
@@ -54,7 +55,8 @@ export interface HandleCandidateDto {
 export interface HandleRejectDto {
   type: 'audio' | 'video';
   to: string;
-  reason: string;
+  reason: 'time_out' | 'reject' | 'hang_up' | 'cancel' | 'offline';
+  callLogId: string;
 }
 
 export interface HandleMicrophoneDto {

@@ -29,12 +29,6 @@ const friendRequestSchema = new Schema<IFriendRequest>(
   { timestamps: true }
 );
 
-friendRequestSchema.pre(/^find/, async function (next) {
-  this.populate('sender recipient', 'name email avatar about online');
-
-  next();
-});
-
 const FriendRequest = model<IFriendRequest>(
   'FriendRequest',
   friendRequestSchema

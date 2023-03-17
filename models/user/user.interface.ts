@@ -16,6 +16,8 @@ export interface IUser {
   otp?: string;
   otpExpireTime?: Date;
 
+  callLogs: Types.ObjectId[];
+
   friends: Types.ObjectId[];
   online: boolean;
   socketId?: string;

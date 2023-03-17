@@ -1,5 +1,6 @@
 import User from '../models/user/user';
 import catchAsync from '../utils/catchAsync';
+import { AppError } from '../utils/error';
 import { Request } from '../utils/types';
 import { CreateUserDto, SearchUserDto } from './dtos/user.dto';
 
@@ -30,7 +31,7 @@ export const searchUser = catchAsync(async (req, res, next) => {
       { name: { $regex: reg, $options: 'i' } },
       { email: { $regex: reg, $options: 'i' } },
     ],
-  }).select('email name avatar online');
+  }).select('name email avatar about online');
 
   res.status(200).json({
     status: 'success',
@@ -43,9 +44,31 @@ export const searchUser = catchAsync(async (req, res, next) => {
 export const getFriends = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.user._id);
 
+  if (!user) {
+    return next(new AppError('Invalid user!'));
+  }
+
   res.status(200).json({
     status: 'success',
     message: 'get friends success',
-    friends: user?.friends,
+    friends: user.friends,
+  });
+});
+
+// Protected
+export const getUserById = catchAsync(async (req, res, next) => {
+  const { userId } = req.params;
+
+  const user = await User.findById(userId).select(
+    'name email avatar about online'
+  );
+
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
+
+  res.status(200).json({
+    status: 'success',
+    user,
   });
 });

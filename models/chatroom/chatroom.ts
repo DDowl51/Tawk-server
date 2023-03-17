@@ -37,12 +37,10 @@ chatroomSchema.pre(/^find/, function (next) {
   this.populate({
     path: 'messages',
     populate: { path: 'sender', select: 'name email avatar about' },
-  })
-    .populate({
-      path: 'lastMessage',
-      populate: { path: 'sender', select: 'name email avatar about' },
-    })
-    .populate('users', 'name email avatar about');
+  }).populate({
+    path: 'lastMessage',
+    populate: { path: 'sender', select: 'name email avatar about' },
+  });
   next();
 });
 

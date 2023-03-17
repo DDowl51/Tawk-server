@@ -26,7 +26,6 @@ export const getSingleChatroom = catchAsync(
       chatroom = await SingleChatroom.create({
         users: [user._id, friendId],
       });
-      await chatroom.populate('users', 'name email avatar about');
     }
 
     res.status(200).json({

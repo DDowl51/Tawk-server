@@ -27,6 +27,8 @@ import {
 import { Chatroom, GroupChatroom } from '../models/chatroom/chatroom';
 import { LinkMessage, TextMessage } from '../models/message/message';
 import axios from 'axios';
+import CallLog from '../models/callLog/callLog';
+import { Types } from 'mongoose';
 
 type SocketHander = (
   socket: Socket,
@@ -56,7 +58,12 @@ export const protect: SocketHander = async (socket, next) => {
 };
 
 export class UserSocket {
-  constructor(private socket: Socket, private userId: string) {}
+  // 当前的通话记录id
+  private callLogId: string | null;
+
+  constructor(private socket: Socket, private userId: string) {
+    this.callLogId = null;
+  }
 
   async createFriendRequest(
     data: CreateFriendRequestDto,
@@ -284,7 +291,10 @@ export class UserSocket {
     callback(groupChatroom);
   }
 
-  async handleOffer(data: HandleOfferDto) {
+  async handleOffer(
+    data: HandleOfferDto,
+    callback?: (callLogId: string) => void
+  ) {
     const { sdp, to, type } = data;
     console.log(`handle offer from user ${this.userId} to ${to}`);
     const toUser = await User.findById(to).select('name email socketId');
@@ -293,20 +303,37 @@ export class UserSocket {
       return this.socket.emit(WebRTCEvents.Error, 'User not online');
     }
 
+    const callLog = await CallLog.create({
+      sender: this.userId,
+      recipient: to,
+      type,
+    });
+    await callLog.save();
+
+    this.callLogId = callLog._id.toString();
+
+    console.log(this.callLogId);
+
     this.emitTo(toUser.socketId, WebRTCEvents.Offer, {
       remoteSDP: sdp,
       from: meUser,
       type,
+      callLogId: callLog._id,
     });
+    if (callback) {
+      callback(callLog._id.toString());
+    }
   }
 
   async handleAnswer(data: HandleAnswerDto, callback: () => void) {
-    const { sdp, to, type } = data;
+    const { sdp, to, type, callLogId } = data;
     console.log(`handle answer from user ${this.userId} to ${to}`);
     const toUser = await User.findById(to).select('name email socketId');
     if (!toUser || !toUser.socketId) {
       return this.socket.emit(WebRTCEvents.Error, 'User not online');
     }
+
+    this.callLogId = callLogId;
 
     this.emitTo(toUser.socketId, WebRTCEvents.Answer, { remoteSDP: sdp, type });
     callback();
@@ -330,19 +357,49 @@ export class UserSocket {
     }
   }
 
-  async handleReject(data: HandleRejectDto, callback?: () => void) {
-    const { reason, to, type } = data;
-    console.log(reason);
+  async handleReject(
+    data: HandleRejectDto,
+    callback?: (callLogId: string) => void
+  ) {
+    const { reason, to, callLogId } = data;
     console.log(`${this.userId} ended the call to ${to}`);
     const toUser = await User.findById(to).select('name email socketId');
     if (!toUser || !toUser.socketId) {
       return this.socket.emit(WebRTCEvents.Error, 'User not online');
     }
-    this.emitTo(toUser.socketId, WebRTCEvents.EndCall, reason);
+
+    console.log(`Reject, callLogId: ${callLogId}`);
+
+    // add call log
+    const callLog = await CallLog.findById(callLogId);
+    if (!callLog) {
+      this.emitError('Invalid call log id');
+    } else {
+      if (reason === 'hang_up') {
+        callLog.missed = false;
+      }
+      await callLog.save();
+
+      const callers = await Promise.all([
+        User.findById(this.userId),
+        User.findById(to),
+      ]);
+
+      callers.forEach(user => user?.callLogs.push(callLog._id));
+
+      await Promise.all(callers.map(u => u?.save()));
+    }
+
+    this.emitTo(toUser.socketId, WebRTCEvents.EndCall, {
+      reason,
+      callLogId,
+    });
 
     if (callback) {
-      callback();
+      callback(callLogId!);
     }
+
+    this.callLogId = null;
   }
 
   async handleMicrophone(data: HandleMicrophoneDto, callback?: () => void) {
