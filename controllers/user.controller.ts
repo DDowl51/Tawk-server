@@ -42,7 +42,10 @@ export const searchUser = catchAsync(async (req, res, next) => {
 
 // Protected
 export const getFriends = catchAsync(async (req, res, next) => {
-  const user = await User.findById(req.user._id);
+  const user = await User.findById(req.user._id).populate(
+    'friends',
+    'name email avatar about'
+  );
 
   if (!user) {
     return next(new AppError('Invalid user!'));

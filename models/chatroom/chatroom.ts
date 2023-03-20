@@ -1,4 +1,4 @@
-import { model, Schema } from 'mongoose';
+import { Model, model, Schema } from 'mongoose';
 import { Message } from '../message/message';
 import {
   IChatroom,
@@ -36,7 +36,12 @@ const groupChatroomSchema = new Schema<IGroupChatroom>({
 chatroomSchema.pre(/^find/, function (next) {
   this.populate({
     path: 'messages',
-    populate: { path: 'sender', select: 'name email avatar about' },
+    populate: {
+      path: 'sender',
+      select: 'name email avatar about',
+    },
+    options: { perDocumentLimit: 30 }, // 每个chatroom中的messages限制数量，
+    // 直接用limit: 30会导致所有chatrooms中messages的总数为30
   }).populate({
     path: 'lastMessage',
     populate: { path: 'sender', select: 'name email avatar about' },
@@ -45,11 +50,12 @@ chatroomSchema.pre(/^find/, function (next) {
 });
 
 export const Chatroom = model<IChatroom>('Chatroom', chatroomSchema);
-export const SingleChatroom = Chatroom.discriminator(
-  'single',
-  singleChatroomSchema
-);
-export const GroupChatroom = Chatroom.discriminator(
-  'group',
-  groupChatroomSchema
-);
+export const SingleChatroom = Chatroom.discriminator<
+  ISingleChatroom,
+  Model<ISingleChatroom>
+>('single', singleChatroomSchema);
+
+export const GroupChatroom = Chatroom.discriminator<
+  IGroupChatroom,
+  Model<IGroupChatroom>
+>('group', groupChatroomSchema);

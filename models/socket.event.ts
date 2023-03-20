@@ -8,6 +8,7 @@ export const ServerEvents = {
   CreateGroup: 'create_group',
   StartVideo: 'start_video',
   AnswerCall: 'answer_call',
+  ReadMessage: 'read_message',
 } as const;
 
 // socket.emit(...)

@@ -54,6 +54,7 @@ const socketHandler = async (socket: Socket) => {
     userSocket.handleCreateGroup.bind(userSocket)
   );
 
+  //- Web RTC
   socket.on(WebRTCEvents.Offer, userSocket.handleOffer.bind(userSocket));
   socket.on(WebRTCEvents.Answer, userSocket.handleAnswer.bind(userSocket));
   socket.on(

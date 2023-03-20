@@ -17,7 +17,6 @@ export const protect = catchAsync(
   async (req: Request & Partial<WithUser>, res, next) => {
     // 1) Get the jwt token
     let token;
-
     if (
       req.headers.authorization &&
       req.headers.authorization.startsWith('Bearer')

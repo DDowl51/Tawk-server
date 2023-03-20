@@ -19,13 +19,9 @@ import {
 } from './dtos/socket.dto';
 import { ClientEvents, WebRTCEvents } from '../models/socket.event';
 import FriendRequest from '../models/friendRequest/friendRequest';
-import {
-  Message,
-  Message as MessageType,
-  User as UserType,
-} from '../utils/types';
+import { Message as MessageType, User as UserType } from '../utils/types';
 import { Chatroom, GroupChatroom } from '../models/chatroom/chatroom';
-import { LinkMessage, TextMessage } from '../models/message/message';
+import { LinkMessage, Message, TextMessage } from '../models/message/message';
 import axios from 'axios';
 import CallLog from '../models/callLog/callLog';
 import { Types } from 'mongoose';

@@ -7,6 +7,7 @@ export interface IMessage {
   chatroomId: Types.ObjectId;
   sender: User;
   quote?: IMessage;
+  read: boolean;
 }
 
 export interface ITextMessage extends IMessage {

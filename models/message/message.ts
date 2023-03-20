@@ -17,6 +17,7 @@ const messageSchema = new Schema<IMessage>(
     },
     chatroomId: { type: Schema.Types.ObjectId, ref: 'Chatroom' },
     sender: { type: Schema.Types.ObjectId, ref: 'User' },
+    read: { type: Boolean, default: false },
   },
   { timestamps: true, discriminatorKey: 'type' }
 );
